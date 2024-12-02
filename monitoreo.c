@@ -14,7 +14,7 @@ int count_fault = 0;
 int count_info = 0;
 int count_debug = 0;
 
-#define UMBRAL_ERRORES 50
+#define UMBRAL_ERRORES 500
 
 // Mutex para sincronizar el acceso a las variables globales
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;

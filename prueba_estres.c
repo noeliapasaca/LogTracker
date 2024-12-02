@@ -1,67 +1,39 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
-#include <arpa/inet.h>
-#include <pthread.h>
 
-#define NUM_REQUESTS 1000
-#define SERVER_IP "127.0.0.1"
-#define SERVER_PORT 3000
+// Función para realizar una prueba de carga utilizando Netcat
+void prueba_de_estres_network(const char* ip, int puerto_abierto, int puerto_cerrado, int num_solicitudes) {
+    char comando[256];
 
+    for (int i = 0; i < num_solicitudes; i++) {
+        snprintf(comando, sizeof(comando), "nc -zv %s %d", ip, puerto_abierto);
+        int result_open = system(comando);
 
-/**
- * Prueba de estrés para nc.
- */
+        if (result_open == 0) {
+            printf("Solicitud exitosa al puerto %d de %s\n", puerto_abierto, ip);
+        } else {
+            printf("Error al intentar conectar al puerto %d de %s (fallo)\n", puerto_abierto, ip);
+        }
 
-void *hacer_solicitud(void *arg) {
-    int sockfd;
-    struct sockaddr_in server_addr;
-    char *message = "GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n";
-    char buffer[1024];
+        snprintf(comando, sizeof(comando), "nc -zv %s %d", ip, puerto_cerrado);
+        int result_closed = system(comando);
 
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) {
-        perror("Error al crear el socket");
-        exit(1);
+        if (result_closed == 0) {
+            printf("Solicitud exitosa al puerto %d de %s (esto debería fallar)\n", puerto_cerrado, ip);
+        } else {
+            printf("Error al intentar conectar al puerto %d de %s (fallo esperado)\n", puerto_cerrado, ip);
+        }
     }
-
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(SERVER_PORT);
-    server_addr.sin_addr.s_addr = inet_addr(SERVER_IP);
-
-    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        perror("Error al conectar con el servidor");
-        close(sockfd);
-        exit(1);
-    }
-
-    send(sockfd, message, strlen(message), 0);
-
-    int bytes_read = recv(sockfd, buffer, sizeof(buffer) - 1, 0);
-    if (bytes_read > 0) {
-        buffer[bytes_read] = '\0';
-    }
-
-    close(sockfd);
-    return NULL;
 }
 
 int main() {
-    pthread_t hilos[NUM_REQUESTS];
+    const char* ip = "192.168.1.1";
+    int puerto_abierto = 80;
+    int puerto_cerrado = 9999;
+    int num_solicitudes = 10;
 
-    for (int i = 0; i < NUM_REQUESTS; i++) {
-        if (pthread_create(&hilos[i], NULL, hacer_solicitud, NULL) != 0) {
-            perror("Error al crear el hilo");
-            exit(1);
-        }
-    }
+    prueba_de_estres_network(ip, puerto_abierto, puerto_cerrado, num_solicitudes);
 
-    for (int i = 0; i < NUM_REQUESTS; i++) {
-        pthread_join(hilos[i], NULL);
-    }
-
-    printf("Prueba de carga terminada: %d solicitudes realizadas.\n", NUM_REQUESTS);
     return 0;
 }
